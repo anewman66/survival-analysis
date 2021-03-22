@@ -36,19 +36,15 @@ library('devEMF')
 library('reshape')
 library('survival')
 
+### Part 1: Setup working directory and files. ###
+
 #Remember if you paste the path in from Windows Explorer to switch the slashes from \ to /
-#setwd("C:/Users/U0034370/OneDrive - Teesside University/TP53_Paper_Corona/Survival")
 
-#Mac version:
-setwd("/Users/alex/OneDrive - Teesside University/TP53_Paper_Blood/Dec2020_Rework")
+#Specify working directory.
+setwd(path/to/file)
 
-survdata <- read.csv("Updated_Survival_Master_19022020_v9_Dec2020.csv", header = TRUE, row.names=1)
+survdata <- read.csv("input_file.csv", header = TRUE, row.names=1)
 surv_all <- survdata
-#Subset on TP53 abn vs normal
-# survdata <- survdata[survdata$Any_TP53 == 'Yes',]
-# dim(survdata)
-# survdata <- survdata[survdata$Any_TP53 == 'No',]
-# dim(survdata)
 
 #Subset for three main subgroups
 #FAB/LMB Only
@@ -68,15 +64,6 @@ eventTTP <- survdata$TTP_3yr_event
 
 timePFS <- survdata$PFS_3yr
 eventPFS <- survdata$PFS_3yr_event
-
-#Subset for only cases with data available during the pilot
-#survdata <- survdata[survdata$Pilot_37_pBL == 'Yes',]
-
-# survdata$Age.thresh18 <- survdata$Age..if.known.
-# survdata$Age.thresh18[survdata$Age..if.known. <= 18] <- c("Young")
-# survdata$Age.thresh18[survdata$Age..if.known. > 18] <- c("Old")
-# survdata$Age.thresh18 <- as.factor(survdata$Age.thresh18)
-
 
 #Check the values are now in the survdata object
 dim(survdata)
@@ -101,13 +88,15 @@ str(survdata) # This tells you what dimensions to put in the next command
 # pvalue(HvI)
 
 #Subset the data to remove descriptor columns - removes an error when printing the univariate results.
-
 ncol(survdata)
-covariates <- survdata[,20:ncol(survdata)]
-#covariates <- survdata[,19:ncol(survdata)]
+covariates <- survdata[,20:ncol(survdata)] #Note - change the number here to say where your data actually starts.
+
 covariates <- colnames(covariates)
 covariates
 
+### Part 2: Run univariate analysis ###
+
+#The following steps may provide warnings, but shouldn't provide errors.
 
 univ_formulasOS <- sapply(covariates,
                         function(x) as.formula(paste('Surv(timeOS, eventOS)~', x)))
@@ -119,13 +108,14 @@ univ_formulasTTP <- sapply(covariates,
                         function(x) as.formula(paste('Surv(timeTTP, eventTTP)~', x)))
 
 
-#Running the Cox model on both OS and TTP datasets - NB: Ensure data isn't mright format
+#Running the Cox model on both OS and TTP datasets - NB: Ensure data isn't mright format.
 univ_modelsOS <- lapply(univ_formulasOS, function(x){coxph(x, data = survdata)})
 univ_modelsPFS <- lapply(univ_formulasPFS, function(x){coxph(x, data = survdata)})
 univ_modelsTTP <- lapply(univ_formulasTTP, function(x){coxph(x, data = survdata)})
 
 
-# Extract data
+# Extract data - if you have non-dichotomised input data (i.e. more than 2 possible outcomes) then this won't be converted to file properly. 
+# Print "univ_results" to see this and just copy to a spreadsheet from the console.                     
 univ_resultsOS <- lapply(univ_modelsOS,
                        function(x){
                          x <- summary(x)
@@ -200,7 +190,7 @@ resTTP
 
 write.table(resTTP, "TTP_corona1_stage.txt",sep='\t',quote = F)
 
-
+### Part 3: Survival Metrics - Cohort Survival time, etc. ###
 
 #Cohort survival time - OS
 surv <- Surv(timeOS,eventOS)
@@ -276,7 +266,9 @@ fitTTP <- survfit(surv ~ survdata$PFS_3yr_event ==1 , data = survdata)
 fitTTP
 plot(fitTTP)
 
-
+### Part 4: Multivariate Analysis.
+                           
+                           
 # Multivariate for the RR - forward selection.
 TP53_bi_fit <- coxph(Surv(timeTTP, eventTTP) ~
                  survdata$Biallelic_vs_normal +
