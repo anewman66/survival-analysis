@@ -41,56 +41,25 @@ library('survival')
 #Remember if you paste the path in from Windows Explorer to switch the slashes from \ to /
 
 #Specify working directory.
-setwd(path/to/file)
+setwd("/Users/alex/OneDrive - Teesside University/Survival")
 
-survdata <- read.csv("input_file.csv", header = TRUE, row.names=1)
+survdata <- read.csv("Form_eBL_Data.csv", header = TRUE, row.names=1)
 surv_all <- survdata
 
-#Subset for three main subgroups
-#FAB/LMB Only
+View(survdata)
+
 survdata <- surv_all
-survdata <- survdata[survdata$Include_92 == 'Yes',]
 
-#Only the high risk group
-survdata <- survdata[!is.na(survdata$Check_TP53_High_Risk),]
-str(survdata)
-
-#sBL times (swap in OS.*.3yr or TTP.*.3yr depending on the analysis)
-timeOS <- survdata$OS_3yr
-eventOS <- survdata$OS_3yr_event
-
-timeTTP <- survdata$TTP_3yr  
-eventTTP <- survdata$TTP_3yr_event
-
-timePFS <- survdata$PFS_3yr
-eventPFS <- survdata$PFS_3yr_event
+time <- survdata$RR.time..mo.
+event <- survdata$RR.event
 
 #Check the values are now in the survdata object
 dim(survdata)
 str(survdata) # This tells you what dimensions to put in the next command
 
-#Make sure the subset in the next line is correct for your file. Anything you want to include as a variate
-#has to be in the rows included. Cut out the columns you don't want and the survival columns.
-
-#Add in InterB splits for VR:
-# survdata$Int_High_Low <- NA
-# survdata$Int_High_Low[survdata$InterB_Group == "High"] <- "Yes"
-# survdata$Int_High_Low[survdata$InterB_Group == "Low"] <- "No"
-# survdata$Int_High_Low[survdata$InterB_Group == "Intermediate"] <- "No"
-# HvL <- survdiff(Surv(timePFS,eventPFS) ~ Int_High_Low,data=survdata)
-# pvalue(HvL)
-# 
-# survdata$Int_High_Int[survdata$InterB_Group == "High"] <- NA
-# survdata$Int_High_Int[survdata$InterB_Group == "Intermediate"] <- "Yes"
-# survdata$Int_High_Int[survdata$InterB_Group == "Low"] <- "No"
-# 
-# HvI <- survdiff(Surv(timePFS,eventPFS) ~ Int_High_Int,data=survdata)
-# pvalue(HvI)
-
 #Subset the data to remove descriptor columns - removes an error when printing the univariate results.
 ncol(survdata)
-covariates <- survdata[,20:ncol(survdata)] #Note - change the number here to say where your data actually starts.
-
+covariates <- survdata[,8:ncol(survdata)] #Note - change the number here to say where your data actually starts.
 covariates <- colnames(covariates)
 covariates
 
@@ -98,25 +67,15 @@ covariates
 
 #The following steps may provide warnings, but shouldn't provide errors.
 
-univ_formulasOS <- sapply(covariates,
-                        function(x) as.formula(paste('Surv(timeOS, eventOS)~', x)))
-
-univ_formulasPFS <- sapply(covariates,
-                          function(x) as.formula(paste('Surv(timePFS, eventPFS)~', x)))
-
-univ_formulasTTP <- sapply(covariates,
-                        function(x) as.formula(paste('Surv(timeTTP, eventTTP)~', x)))
-
+univ_formulas <- sapply(covariates,
+                        function(x) as.formula(paste('Surv(time, event)~', x)))
 
 #Running the Cox model on both OS and TTP datasets - NB: Ensure data isn't mright format.
-univ_modelsOS <- lapply(univ_formulasOS, function(x){coxph(x, data = survdata)})
-univ_modelsPFS <- lapply(univ_formulasPFS, function(x){coxph(x, data = survdata)})
-univ_modelsTTP <- lapply(univ_formulasTTP, function(x){coxph(x, data = survdata)})
-
+univ_models <- lapply(univ_formulas, function(x){coxph(x, data = survdata)})
 
 # Extract data - if you have non-dichotomised input data (i.e. more than 2 possible outcomes) then this won't be converted to file properly. 
 # Print "univ_results" to see this and just copy to a spreadsheet from the console.                     
-univ_resultsOS <- lapply(univ_modelsOS,
+univ_results <- lapply(univ_models,
                        function(x){
                          x <- summary(x)
                          p.value<-signif(x$wald["pvalue"], digits=3)
@@ -134,62 +93,20 @@ univ_resultsOS <- lapply(univ_modelsOS,
                          #return(exp(cbind(coef(x),confint(x))))
                        })
 
-univ_resultsPFS <- lapply(univ_modelsPFS,
-                         function(x){
-                           x <- summary(x)
-                           p.value<-signif(x$wald["pvalue"], digits=3)
-                           wald.test<-signif(x$wald["test"], digits=3)
-                           beta<-signif(x$coef[1], digits=3);#coeficient beta
-                           HR <-signif(x$coef[2], digits=3);#exp(beta)
-                           HR.confint.lower <- signif(x$conf.int[,"lower .95"], 4)
-                           HR.confint.upper <- signif(x$conf.int[,"upper .95"], 4)
-                           HR <- paste0(HR, " (",
-                                        HR.confint.lower, "-", HR.confint.upper, ")")
-                           res<-c(beta, HR, wald.test, p.value)
-                           names(res)<-c("beta", "HR (95% CI for HR)", "wald.test",
-                                         "p.value")
-                           return(res)
-                           #return(exp(cbind(coef(x),confint(x))))
-                         })
-
-univ_resultsTTP <- lapply(univ_modelsTTP,
-                         function(x){
-                           x <- summary(x)
-                           p.value<-signif(x$wald["pvalue"], digits=3)
-                           wald.test<-signif(x$wald["test"], digits=3)
-                           beta<-signif(x$coef[1], digits=3);#coeficient beta
-                           HR <-signif(x$coef[2], digits=3);#exp(beta)
-                           HR.confint.lower <- signif(x$conf.int[,"lower .95"], 3)
-                           HR.confint.upper <- signif(x$conf.int[,"upper .95"], 3)
-                           HR <- paste0(HR, " (",
-                                        HR.confint.lower, "-", HR.confint.upper, ")")
-                           res<-c(beta, HR, wald.test, p.value)
-                           names(res)<-c("beta", "HR (95% CI for HR)", "wald.test",
-                                         "p.value")
-                           return(res)
-                           #return(exp(cbind(coef(x),confint(x))))
-                         })
-
 # Remember to rename output file here first!
 
-resOS <- t(as.data.frame(univ_resultsOS, check.names = FALSE))
-resOS <- as.data.frame(resOS)
-resOS
+res <- t(as.data.frame(univ_results, check.names = FALSE))
+res <- as.data.frame(res)
+res
 
-write.table(resOS, "OS_corona1_stage.txt",sep='\t',quote = F)
+write.table(res, "results.txt",sep='\t',quote = F)
 
-resPFS <- t(as.data.frame(univ_resultsPFS, check.names = FALSE))
-resPFS <- as.data.frame(resPFS)
-resPFS
 
-write.table(resPFS, "PFS_corona2_stage.txt",sep='\t',quote = F)
 
-resTTP <- t(as.data.frame(univ_resultsTTP, check.names = FALSE))
-resTTP <- as.data.frame(resTTP)
-resTTP
-
-write.table(resTTP, "TTP_corona1_stage.txt",sep='\t',quote = F)
-
+                        
+                        
+                        
+                        
 ### Part 3: Survival Metrics - Cohort Survival time, etc. ###
 
 #Cohort survival time - OS
