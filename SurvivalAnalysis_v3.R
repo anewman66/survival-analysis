@@ -36,19 +36,11 @@ library('devEMF')
 library('reshape')
 library('survival')
 
-#Remember if you paste the path in from Windows Explorer to switch the slashes from \ to /
-#setwd("C:/Users/U0034370/OneDrive - Teesside University/TP53_Paper_Corona/Survival")
-
 #Mac version:
 setwd("/Users/alex/OneDrive - Teesside University/Student/2021/Newcastle")
 
 survdata <- read.csv("Survival_Analysis_JB_v1.csv", header = TRUE, row.names=1)
 surv_all <- survdata
-#Subset on TP53 abn vs normal
-# survdata <- survdata[survdata$Any_TP53 == 'Yes',]
-# dim(survdata)
-# survdata <- survdata[survdata$Any_TP53 == 'No',]
-# dim(survdata)
 
 #Subset for three main subgroups
 #FAB/LMB Only
@@ -83,34 +75,9 @@ eventTTP <- survdata$TTP_3yr_event
 timePFS <- survdata$PFS_3yr
 eventPFS <- survdata$PFS_3yr_event
 
-
-# survdata$Age.thresh18 <- survdata$Age..if.known.
-# survdata$Age.thresh18[survdata$Age..if.known. <= 18] <- c("Young")
-# survdata$Age.thresh18[survdata$Age..if.known. > 18] <- c("Old")
-# survdata$Age.thresh18 <- as.factor(survdata$Age.thresh18)
-
-
 #Check the values are now in the survdata object
 dim(survdata)
 str(survdata) # This tells you what dimensions to put in the next command
-
-#Make sure the subset in the next line is correct for your file. Anything you want to include as a variate
-#has to be in the rows included. Cut out the columns you don't want and the survival columns.
-
-#Add in InterB splits for VR:
-# survdata$Int_High_Low <- NA
-# survdata$Int_High_Low[survdata$InterB_Group == "High"] <- "Yes"
-# survdata$Int_High_Low[survdata$InterB_Group == "Low"] <- "No"
-# survdata$Int_High_Low[survdata$InterB_Group == "Intermediate"] <- "No"
-# HvL <- survdiff(Surv(timePFS,eventPFS) ~ Int_High_Low,data=survdata)
-# pvalue(HvL)
-# 
-# survdata$Int_High_Int[survdata$InterB_Group == "High"] <- NA
-# survdata$Int_High_Int[survdata$InterB_Group == "Intermediate"] <- "Yes"
-# survdata$Int_High_Int[survdata$InterB_Group == "Low"] <- "No"
-# 
-# HvI <- survdiff(Surv(timePFS,eventPFS) ~ Int_High_Int,data=survdata)
-# pvalue(HvI)
 
 #Subset the data to remove descriptor columns - removes an error when printing the univariate results.
 
@@ -264,32 +231,6 @@ surv <- Surv(timeOS,eventOS)
 fit <- survfit(surv ~ Check_TP53_High_Risk, data = survdata)
 resOS <- summary(fit, times = c(3))
 
-
-surv <- Surv(timeOS,eventOS)
-fit <- survfit(surv ~ Check_TP53_High_Risk, data = survdata)
-resOS <- summary(fit, times = c(3))
-
-surv <- Surv(timePFS,eventPFS)
-fit <- survfit(surv ~ InterB_Group, data = survdata)
-resPFS <- summary(fit, times = c(3))
-
-surv <- Surv(timeOS,eventOS)
-fit <- survfit(surv ~ InterB_Group, data = survdata)
-resOS <- summary(fit, times = c(3))
-
-
-
-
-
-
-
-
-fit <- survfit(surv ~ Int_High_Other, data = survdata)
-resPFS <- summary(fit, times = c(3))
-
-surv <- Surv(timeOS,eventOS)
-fit <- survfit(surv ~ Any_TP53, data = survdata)
-resPFS <- summary(fit, times = c(3))
 
 #Median OS calulation when survival doesn't go below 50%.
 surv <- Surv(timeOS,eventOS)
