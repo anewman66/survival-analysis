@@ -41,12 +41,6 @@ library('survival')
 setwd("")
 full_input <- read.csv("input.csv", header = TRUE, row.names=1)
 
-#Create a directory for your files
-
-dir.create("directory")
-
-setwd("wd/directory")
-
 ### Set your cohort
 
 #All
